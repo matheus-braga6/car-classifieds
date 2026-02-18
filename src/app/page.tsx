@@ -2,6 +2,8 @@ import { Container } from "@/components/layout/Container"
 import { CarCard } from "@/components/ui/car-card"
 import { supabaseServer } from "@/lib/supabase-server"
 
+export const dynamic = "force-dynamic"
+
 export default async function Home() {
   const { data, error } = await supabaseServer
     .from("cars")
