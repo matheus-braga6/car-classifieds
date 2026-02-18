@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* =========================
+   LOCAL FONTS
+========================= */
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/poppins400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/poppins500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/poppins600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/poppins700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/poppins800.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/poppins900.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme inline {
+  --color-orange: var(--orange);
+  --color-lightorange: var(--light-orange);
+  --color-darkorange: var(--dark-orange);
+  --color-gray: var(--gray);
+  --color-snow: var(--snow);
+}
+
+/* =========================
+   GLOBAL VARIABLES
+========================= */
+
+:root {
+  --orange: #F0660D;
+  --light-orange: #E0926B;
+  --dark-orange: #9A3B12;
+  --gray: #454545;
+  --snow: #F3F3F3;
+}
+
+.dark {
+  --orange: #F0660D;
+  --light-orange: #E0926B;
+  --dark-orange: #9A3B12;
+  --gray: #454545;
+  --snow: #FFF5F5;
+}
+
+@layer base {
+  * {
+    @apply box-border;
+    scroll-behavior: smooth;
+    font-family: "Poppins", sans-serif;
+  }
+
+  html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply bg-white text-black;
+    overflow-x: hidden;
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
+}
