@@ -7,14 +7,14 @@ import { WhatsAppFillIcon } from "@/assets/icons/WhatsAppFillIcon"
 
 export function Footer() {
   return (
-    <footer className="w-full text-gray mt-20">
-      <div className="w-full bg-snow border border-gray-400 rounded-t-[50px]">
+    <footer className="w-full text-gray">
+      <div className="w-full bg-snow">
         <Container>
           <div className="grid gap-7 lg:gap-12 py-16 md:grid-cols-2">
             <div className="space-y-4">
               <h3 className="text-xl font-bold">Car Classifieds</h3>
               <p className="text-gray text-sm max-w-sm">
-                Find the perfect car with ease. Browse trusted listings, compare options, and connect directly with sellers — all in one place.
+                Encontre o carro perfeito com facilidade. Explore anúncios confiáveis, compare opções e conecte-se diretamente com os vendedores — tudo em um só lugar.
               </p>
 
               <div className="flex gap-3 mt-8">
@@ -36,7 +36,7 @@ export function Footer() {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-lg font-semibold">Quick Links</h4>
+              <h4 className="text-lg font-semibold">Links Rápidos</h4>
 
               <ul className="space-y-2 text-sm text-gray">
                 {quickLinks.links.map((link) => (
@@ -57,7 +57,7 @@ export function Footer() {
 
           <div className="border-t border-gray-400 py-6">
             <p className="text-center text-xs text-gray">
-              © {new Date().getFullYear()} Car Classifieds. All rights reserved.
+              © {new Date().getFullYear()} Car Classifieds. Todos direitos reservados.
             </p>
           </div>
         </Container>

@@ -1,5 +1,5 @@
 import { Container } from "@/components/layout/Container"
-import { supabaseServer } from "@/lib/supabase-server"
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 import CarEditForm from "./CarEditForm"
 
 interface PageProps {
@@ -9,6 +9,7 @@ interface PageProps {
 }
 
 export default async function CarDetailPage({ params }: PageProps) {
+  const supabaseServer = await createSupabaseServerClient()
   const { id } = await params
 
   const { data, error } = await supabaseServer
@@ -28,14 +29,17 @@ export default async function CarDetailPage({ params }: PageProps) {
   }
 
   return (
-    <Container>
-      <section className="mt-20 py-10 min-h-[calc(100vh-80px)]">
-        <h1 className="text-3xl text-center text-gray font-bold mb-8">
-          EDIT CAR
-        </h1>
+    <section 
+      className="
+        w-full px-15 py-10 sm:p-10
+        flex flex-col items-center gap-5
+      "
+    >
+      <h1 className="text-3xl text-center text-gray font-bold mb-8">
+        EDITAR CARRO
+      </h1>
 
-        <CarEditForm car={data} />
-      </section>
-    </Container>
+      <CarEditForm car={data} />
+    </section>
   )
 }

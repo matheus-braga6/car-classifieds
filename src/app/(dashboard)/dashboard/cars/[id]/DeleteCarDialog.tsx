@@ -43,15 +43,15 @@ export function DeleteCarDialog({ onDelete }: Props) {
           {deleting && (
             <LoaderLineIcon className="size-4 animate-spin" />
           )}
-          {!deleting && "Delete Car"}
+          {!deleting && "Deletar Carro"}
         </Button>
       </AlertDialogTrigger>
 
       <AlertDialogContent className="bg-white border border-gray-300">
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Car</AlertDialogTitle>
+          <AlertDialogTitle>Deletar Carro</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure?
+            Você tem certeza que deseja deletar este carro? Essa ação é irreversível.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -62,14 +62,14 @@ export function DeleteCarDialog({ onDelete }: Props) {
               bg-snow hover:bg-gray-300
               cursor-pointer"
           >
-            Cancel
+            Cancelar
           </AlertDialogCancel>
 
           <AlertDialogAction 
             onClick={handleDeleteClick}
             className="bg-red-500 hover:bg-red-800 text-white cursor-pointer"
           >
-            Delete permanently
+            Deletar permanentemente
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

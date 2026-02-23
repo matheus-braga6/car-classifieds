@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button"
 
 interface Props {
   car: Car
+  editable?: boolean
 }
 
-export function CarCard({ car }: Props) {
+export function CarCard({ car, editable = false }: Props) {
   const [imageLoading, setImageLoading] = useState(true)
   
   return (
@@ -46,16 +47,23 @@ export function CarCard({ car }: Props) {
             }).format(car.price)}
         </p>
 
-        <Link href={`/cars/${car.id}`} className="mt-auto">
+        <Link 
+          href={editable ? `/dashboard/cars/${car.id}` : `/cars/${car.id}`} 
+          className={`
+            mt-auto"
+            ${!editable ? "pointer-events-none" : ""}
+          `}
+        >
           <Button 
-            className="
+            className={`
               w-full h-10
               bg-orange hover:bg-darkorange transition-colors
               text-white
               cursor-pointer
-            "
+              ${!editable ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+            `}
           >
-            Editar
+            {editable ? "Editar" : "Ver detalhes (Em Breve)"}
           </Button>
         </Link>
       </CardContent>

@@ -1,9 +1,9 @@
 import type { FooterSection } from "@/types/footer"
 
 export const quickLinks: FooterSection = {
-  title: "Quick Links",
   links: [
-    { label: "All Cars", href: "/" },
-    { label: "Post Car", href: "/cars/new"}
+    { label: "Todos os Carros", href: "/" },
+    { label: "Login", href: "/login"},
+    { label: "Cadastre-se", href: "/register"},
   ],
 }
