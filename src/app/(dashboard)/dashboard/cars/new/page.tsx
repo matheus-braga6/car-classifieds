@@ -109,11 +109,11 @@ export default function NewCarPage() {
   return (
     <section 
       className="
-        w-full px-15 py-10 sm:p-10
+        w-full p-4 lg:py-10
         flex flex-col items-center gap-5
       "
     >
-      <h1 className="text-3xl text-center text-gray font-bold mb-8">
+      <h1 className="w-[75%] text-3xl text-center text-gray font-bold mb-8">
         ADICIONAR CARRO
       </h1>
       

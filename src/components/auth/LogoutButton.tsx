@@ -36,7 +36,9 @@ export function LogoutButton({ variant = "outline" }: Props) {
       disabled={isLoading}
       variant={variant}
       className={
-        `cursor-pointer 
+        `
+        w-max lg:w-full h-fit lg:h-9 p-0 lg:p-2
+        cursor-pointer 
         ${variant === "ghost" ? "text-red-500 hover:text-white hover:bg-red-500" : ""}`
       }
     >

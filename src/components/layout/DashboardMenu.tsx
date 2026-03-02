@@ -20,7 +20,7 @@ interface MenuContentProps {
 
 function MenuContent({ onClose }: MenuContentProps) {
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="w-full flex flex-col gap-5 lg:p-4">
       <Link href="/" className="flex w-max mr-auto">
         <Image
           src="/favicon.png"
@@ -33,7 +33,12 @@ function MenuContent({ onClose }: MenuContentProps) {
       <Link href="/dashboard" onClick={onClose}>
         <Button
           variant="ghost"
-          className="w-full hover:bg-orange text-black hover:text-white font-normal cursor-pointer"
+          className="
+            w-max lg:w-full h-fit lg:h-9 p-0 lg:p-2
+            hover:bg-orange 
+            text-black hover:text-white 
+            cursor-pointer
+          "
         >
           Meus Carros
         </Button>
@@ -42,7 +47,12 @@ function MenuContent({ onClose }: MenuContentProps) {
       <Link href="/dashboard/cars/new" onClick={onClose}>
         <Button
           variant="ghost"
-          className="w-full hover:bg-orange text-black hover:text-white font-normal cursor-pointer"
+          className="
+            w-max lg:w-full h-fit lg:h-9 p-0 lg:p-2
+            hover:bg-orange 
+            text-black hover:text-white 
+            cursor-pointer
+          "
         >
           Adicionar Carro
         </Button>
@@ -58,19 +68,19 @@ export default function DashboardMenu () {
 
   return (
     <>
-      <aside className="hidden md:flex w-60 min-h-screen bg-snow">
+      <aside className="hidden lg:flex w-60 min-w-60 min-h-screen bg-snow">
         <MenuContent onClose={() => {}}/>
       </aside>
 
-      <div className="md:hidden fixed top-9 left-4 z-50">
+      <div className="lg:hidden fixed top-4 left-4 z-50">
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger className="bg-orange p-2 rounded-full">
-              <MenuLineIcon className="size-6 text-snow" />
+              <MenuLineIcon className="size-5 text-snow" />
             </SheetTrigger>
 
             <SheetContent 
               side="left" 
-              className="bg-white border-none"
+              className="w-80 min-w-80 p-4 bg-white border-none"
             >
               <VisuallyHidden>
                 <SheetTitle>Menu</SheetTitle>

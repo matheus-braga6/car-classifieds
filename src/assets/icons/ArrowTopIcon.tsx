@@ -1,4 +1,4 @@
-export function ArrowLeftIcon({ className }: { className?: string }) {
+export function ArrowTopIcon({ className }: { className?: string }) {
   return (
     <span className={className}>
       <svg 
@@ -7,7 +7,7 @@ export function ArrowLeftIcon({ className }: { className?: string }) {
         fill="currentColor"
         className={className}
       >
-        <path d="M10.8284 12.0007L15.7782 16.9504L14.364 18.3646L8 12.0007L14.364 5.63672L15.7782 7.05093L10.8284 12.0007Z"></path>
+        <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
       </svg>
     </span>
   )

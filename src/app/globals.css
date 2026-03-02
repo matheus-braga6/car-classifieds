@@ -60,6 +60,21 @@
   --color-darkorange: var(--dark-orange);
   --color-gray: var(--gray);
   --color-snow: var(--snow);
+
+  --breakpoint-xs: 420px;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
 }
 
 /* =========================
@@ -92,6 +107,18 @@
   html {
     overflow-y: scroll;
     scrollbar-gutter: stable;
+  }
+
+  html::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: var(--snow)
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background: var(--color-gray-400)
   }
 
   body {
