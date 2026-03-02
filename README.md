@@ -43,12 +43,16 @@ O objetivo deste projeto é praticar integração full-stack utilizando ferramen
 - ✅ Menu lateral responsivo com Sheet (mobile) e sidebar (desktop)
 - ✅ Header dinâmico baseado no estado de autenticação
 - ✅ Layout de dashboard separado do layout público
+- ✅ Filtros na listagem pública (marca, ano, preço) com múltipla seleção e accordion
+- ✅ Filtros no dashboard (marca, ano, preço) com seleção única e aplicação em lote
+- ✅ Filtro mobile via Sheet na listagem pública
+- ✅ Tags de filtros ativos com remoção individual
+- ✅ Padronização de código (inglês para código interno, português para exibição)
 
 ---
 
 ## 📦 Próximas Melhorias
 
-- 🔎 Busca e filtros (marca, ano, preço, vendedor)
 - 📄 Paginação
 - 📄 Página de detalhes do veículo
 - 👤 Perfil do vendedor
