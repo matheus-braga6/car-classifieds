@@ -35,7 +35,7 @@ export default async function CarDetailPage({ params }: PageProps) {
         flex flex-col items-center gap-5
       "
     >
-      <h1 className="w-[75%] text-3xl text-center text-gray font-bold mb-8">
+      <h1 className="w-[75%] text-xl text-center text-gray font-bold mb-8">
         EDITAR CARRO
       </h1>
 

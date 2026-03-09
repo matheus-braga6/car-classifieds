@@ -7,36 +7,62 @@ import { createSupabaseServerClient } from "@/lib/supabase-server"
 export const dynamic = "force-dynamic"
 interface PageProps {
   searchParams: Promise<{
-    brand?: string | string[]   
-    year?: string | string[]    
+    brand?: string | string[]
+    fuel?: string | string[]
+    transmission?: string | string[]
+    category?: string | string[]
+    color_main?: string | string[]
+    yearMin?: string
+    yearMax?: string
+    mileageMin?: string
+    mileageMax?: string
     priceMin?: string
     priceMax?: string
   }>
 }
 
 export default async function Home({ searchParams }: PageProps) {
-  const { brand, year, priceMin, priceMax } = await searchParams
+  const {
+    brand, fuel, transmission, category, color_main,
+    yearMin, yearMax, mileageMin, mileageMax, priceMin, priceMax
+  } = await searchParams
   const supabaseServer = await createSupabaseServerClient()
 
   const { data: allCars } = await supabaseServer
     .from("cars")
-    .select("brand, year")
+    .select("brand, fuel, transmission, category, color_main")
 
-  const brands = [...new Set(allCars?.map((c) => c.brand) ?? [])].sort()
-  const years = [...new Set(allCars?.map((c) => c.year) ?? [])].sort((a, b) => b - a)
+  const brands       = [...new Set(allCars?.map((c) => c.brand) ?? [])].sort()
+  const fuels        = [...new Set(allCars?.map((c) => c.fuel).filter(Boolean) ?? [])]
+  const transmissions= [...new Set(allCars?.map((c) => c.transmission).filter(Boolean) ?? [])]
+  const categories   = [...new Set(allCars?.map((c) => c.category).filter(Boolean) ?? [])].sort()
+  const colors       = [...new Set(allCars?.map((c) => c.color_main).filter(Boolean) ?? [])].sort()
 
-  const brands_filter = brand ? (Array.isArray(brand) ? brand : [brand]) : []
-  const years_filter = year ? (Array.isArray(year) ? year.map(Number) : [Number(year)]) : []
+  const toArray = (val?: string | string[]) => val ? (Array.isArray(val) ? val : [val]) : []
+
+  const brands_filter       = toArray(brand)
+  const fuels_filter        = toArray(fuel)
+  const transmissions_filter= toArray(transmission)
+  const categories_filter   = toArray(category)
+  const colors_filter       = toArray(color_main)
 
   let query = supabaseServer
     .from("cars")
     .select("*")
+    .eq("status", "active")
     .order("created_at", { ascending: false })
 
-  if (brands_filter.length > 0) query = query.in("brand", brands_filter)
-  if (years_filter.length > 0) query = query.in("year", years_filter)
-  if (priceMin) query = query.gte("price", Number(priceMin))
-  if (priceMax) query = query.lte("price", Number(priceMax))
+  if (brands_filter.length > 0)        query = query.in("brand", brands_filter)
+  if (fuels_filter.length > 0)         query = query.in("fuel", fuels_filter)
+  if (transmissions_filter.length > 0) query = query.in("transmission", transmissions_filter)
+  if (categories_filter.length > 0)    query = query.in("category", categories_filter)
+  if (colors_filter.length > 0)        query = query.in("color_main", colors_filter)
+  if (yearMin)    query = query.gte("year_model", Number(yearMin))
+  if (yearMax)    query = query.lte("year_model", Number(yearMax))
+  if (mileageMin) query = query.gte("mileage", Number(mileageMin))
+  if (mileageMax) query = query.lte("mileage", Number(mileageMax))
+  if (priceMin)   query = query.gte("price", Number(priceMin))
+  if (priceMax)   query = query.lte("price", Number(priceMax))
 
   const { data, error } = await query
   if (error) console.error(error)
@@ -48,14 +74,14 @@ export default async function Home({ searchParams }: PageProps) {
       <section className="mt-20 py-10 h-full flex flex-col items-center min-h-[calc(100vh-80px)]">
         <div className="lg:hidden mb-10 flex w-full">
           <CarFiltersMobile
-            options={{ brand: brands, year: years }}
+            options={{ brand: brands, fuel: fuels, transmission: transmissions, category: categories, color_main: colors, year_model: [], mileage: [] }}
           />
         </div>
 
         <div className="w-full flex gap-10">
           <aside className="hidden lg:block shrink-0">
             <CarFilters 
-              options={{ brand: brands, year: years }}
+              options={{ brand: brands, fuel: fuels, transmission: transmissions, category: categories, color_main: colors, year_model: [], mileage: [] }}
             />
           </aside>
 

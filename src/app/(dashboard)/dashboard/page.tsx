@@ -3,34 +3,50 @@ import { CarCard } from "@/components/car/CarCard"
 import { CarFiltersDashboard } from "@/components/car/CarFiltersDashboard"
 interface PageProps {
   searchParams: Promise<{
-    brand?: string    
-    year?: string    
-    priceMin?: string 
-    priceMax?: string 
+    brand?: string
+    fuel?: string
+    transmission?: string
+    color_main?: string  
+    yearMin?: string
+    yearMax?: string
+    mileageMin?: string
+    mileageMax?: string
+    priceMin?: string
+    priceMax?: string
   }>
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
-  const { brand, year, priceMin, priceMax } = await searchParams
+  const { brand, fuel, transmission, color_main, yearMin, yearMax, mileageMin, mileageMax, priceMin, priceMax } = await searchParams
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: allCars } = await supabase
     .from("cars")
-    .select("brand, year")
+    .select("brand, year_model, fuel, transmission, color_main")
     .eq("user_id", user!.id)
 
   const brands = [...new Set(allCars?.map((c) => c.brand) ?? [])].sort()
-  const years = [...new Set(allCars?.map((c) => c.year) ?? [])].sort((a, b) => b - a)
+  const fuels = [...new Set(allCars?.map((c) => c.fuel).filter(Boolean) ?? [])]
+  const transmissions = [...new Set(allCars?.map((c) => c.transmission).filter(Boolean) ?? [])]
+  const colors = [...new Set(allCars?.map((c) => c.color_main).filter(Boolean) ?? [])].sort()
+
 
   let query = supabase
   .from("cars")
   .select("*")
   .eq("user_id", user!.id)
+  .order("featured", { ascending: false })
   .order("created_at", { ascending: false })
 
   if (brand) query = query.eq("brand", brand)
-  if (year) query = query.eq("year", Number(year))
+  if (fuel) query = query.eq("fuel", fuel)
+  if (transmission) query = query.eq("transmission", transmission)
+  if (color_main) query = query.eq("color_main", color_main)
+  if (yearMin) query = query.gte("year_model", Number(yearMin))
+  if (yearMax) query = query.lte("year_model", Number(yearMax))
+  if (mileageMin) query = query.gte("mileage", Number(mileageMin))
+  if (mileageMax) query = query.lte("mileage", Number(mileageMax))
   if (priceMin) query = query.gte("price", Number(priceMin))
   if (priceMax) query = query.lte("price", Number(priceMax))
 
@@ -48,10 +64,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       </h1>
 
       <CarFiltersDashboard
-        options={{
-          brand: brands,
-          year: years
-        }}
+        options={{ brand: brands, fuel: fuels, transmission: transmissions, color_main: colors, year_model: [], mileage: [] }}
       />
 
       {cars && cars.length > 0 ? (

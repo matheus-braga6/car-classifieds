@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { CloseLineIcon } from "@/assets/icons/CloseLineIcon"
-import { homeFilterConfig } from "@/data/car-filters"
+import { homeFilterConfig, filterLabels } from "@/data/car-filters"
 
 interface Props {
   options: {
@@ -28,11 +28,18 @@ function formatCurrency(value: number) {
   }).format(value)
 }
 
+function formatMileage(value: string) {
+  const numbers = value.replace(/\D/g, "")
+  if (!numbers) return ""
+  return `${new Intl.NumberFormat("pt-BR").format(Number(numbers))} km`
+}
+
 export function CarFilters({ options }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
+  // Price state
   const [priceMin, setPriceMin] = useState(searchParams.get("priceMin") ?? "")
   const [priceMax, setPriceMax] = useState(searchParams.get("priceMax") ?? "")
   const [priceMinFormatted, setPriceMinFormatted] = useState(() => {
@@ -44,6 +51,22 @@ export function CarFilters({ options }: Props) {
     return val ? formatCurrency(Number(val)) : ""
   })
 
+  // Year state
+  const [yearMin, setYearMin] = useState(searchParams.get("yearMin") ?? "")
+  const [yearMax, setYearMax] = useState(searchParams.get("yearMax") ?? "")
+
+  // Mileage state
+  const [mileageMin, setMileageMin] = useState(searchParams.get("mileageMin") ?? "")
+  const [mileageMax, setMileageMax] = useState(searchParams.get("mileageMax") ?? "")
+  const [mileageMinFormatted, setMileageMinFormatted] = useState(() => {
+    const val = searchParams.get("mileageMin")
+    return val ? formatMileage(val) : ""
+  })
+  const [mileageMaxFormatted, setMileageMaxFormatted] = useState(() => {
+    const val = searchParams.get("mileageMax")
+    return val ? formatMileage(val) : ""
+  })
+ 
   // Returns array of selected values for a given filter key
   function getSelected(key: string): string[] {
     return searchParams.getAll(key)
@@ -66,7 +89,7 @@ export function CarFilters({ options }: Props) {
     router.push(`${pathname}?${params.toString()}`)
   }, [searchParams, pathname, router])
 
-  // Handles price input formatting and updates local state
+  // Handles price input formatting
   function handlePriceInput(
     raw: string,
     setSetter: (v: string) => void,
@@ -78,35 +101,55 @@ export function CarFilters({ options }: Props) {
     setFormatted(numbers ? formatCurrency(number) : "")
   }
 
+  // Handles mileage input formatting
+  function handleMileageInput(raw: string, setSetter: (v: string) => void, setFormatted: (v: string) => void) {
+    const numbers = raw.replace(/\D/g, "")
+    setSetter(numbers)
+    setFormatted(numbers ? formatMileage(numbers) : "")
+  }
+
+  // Applies price filter to URL
   function applyPriceFilter() {
     const params = new URLSearchParams(searchParams.toString())
-
-     if (priceMin) {
-      params.set("priceMin", priceMin)   
-    } else {
-      params.delete("priceMin")          
-    }
-
-    if (priceMax) {
-      params.set("priceMax", priceMax)   
-    } else {
-      params.delete("priceMax")        
-    }
-
+    if (priceMin) params.set("priceMin", priceMin); else params.delete("priceMin")
+    if (priceMax) params.set("priceMax", priceMax); else params.delete("priceMax")
     router.push(`${pathname}?${params.toString()}`)
   }
 
-   // Removes a specific value from a filter
+  // Applies year range filter to URL
+  function applyYearFilter() {
+    const params = new URLSearchParams(searchParams.toString())
+    if (yearMin) params.set("yearMin", yearMin); else params.delete("yearMin")
+    if (yearMax) params.set("yearMax", yearMax); else params.delete("yearMax")
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  // Applies mileage range filter to URL
+  function applyMileageFilter() {
+    const params = new URLSearchParams(searchParams.toString())
+    if (mileageMin) params.set("mileageMin", mileageMin); else params.delete("mileageMin")
+    if (mileageMax) params.set("mileageMax", mileageMax); else params.delete("mileageMax")
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  // Removes a specific value from a filter
   const removeValue = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
 
-     if (key === "price") { 
-      params.delete("priceMin")          
-      params.delete("priceMax")          
-      setPriceMin("")
-      setPriceMax("")
-      setPriceMinFormatted("")
-      setPriceMaxFormatted("")
+    if (key === "price") {
+      params.delete("priceMin")
+      params.delete("priceMax")
+      setPriceMin(""); setPriceMax("")
+      setPriceMinFormatted(""); setPriceMaxFormatted("")
+    } else if (key === "year") {
+      params.delete("yearMin")
+      params.delete("yearMax")
+      setYearMin(""); setYearMax("")
+    } else if (key === "mileage") {
+      params.delete("mileageMin")
+      params.delete("mileageMax")
+      setMileageMin(""); setMileageMax("")
+      setMileageMinFormatted(""); setMileageMaxFormatted("")
     } else {
       const current = params.getAll(key)
       params.delete(key)
@@ -116,6 +159,7 @@ export function CarFilters({ options }: Props) {
     router.push(`${pathname}?${params.toString()}`)
   }, [searchParams, pathname, router])
 
+
   // Builds the list of active filter tags to display
   const activeTags: { key: string; value: string }[] = []
   homeFilterConfig.forEach((filter) => {
@@ -124,25 +168,23 @@ export function CarFilters({ options }: Props) {
         activeTags.push({ key: filter.key, value })
       })
     } else if (filter.type === "price-range") {
-      const min = searchParams.get("priceMin")  
+      const min = searchParams.get("priceMin")
       const max = searchParams.get("priceMax")
-
-      if (min && max) {
-        activeTags.push({ 
-          key: "price", 
-          value: `${formatCurrency(Number(min))} — ${formatCurrency(Number(max))}` 
-        })
-      } else if (min) {
-        activeTags.push({ 
-          key: "price", 
-          value: `A partir de ${formatCurrency(Number(min))}` 
-        })
-      } else if (max) {
-        activeTags.push({ 
-          key: "price", 
-          value: `Até ${formatCurrency(Number(max))}` 
-        })
-      }
+      if (min && max) activeTags.push({ key: "price", value: `${formatCurrency(Number(min))} — ${formatCurrency(Number(max))}` })
+      else if (min) activeTags.push({ key: "price", value: `A partir de ${formatCurrency(Number(min))}` })
+      else if (max) activeTags.push({ key: "price", value: `Até ${formatCurrency(Number(max))}` })
+    } else if (filter.type === "year-range") {
+      const min = searchParams.get("yearMin")
+      const max = searchParams.get("yearMax")
+      if (min && max) activeTags.push({ key: "year", value: `${min} — ${max}` })
+      else if (min) activeTags.push({ key: "year", value: `A partir de ${min}` })
+      else if (max) activeTags.push({ key: "year", value: `Até ${max}` })
+    } else if (filter.type === "mileage-range") {
+      const min = searchParams.get("mileageMin")
+      const max = searchParams.get("mileageMax")
+      if (min && max) activeTags.push({ key: "mileage", value: `${mileageMin} — ${mileageMax}` })
+      else if (min) activeTags.push({ key: "mileage", value: `A partir de ${mileageMin}` })
+      else if (max) activeTags.push({ key: "mileage", value: `Até ${mileageMax}` })
     }
   })
 
@@ -158,7 +200,7 @@ export function CarFilters({ options }: Props) {
               variant="outline"
               className="flex flex-wrap items-center gap-1 px-2 py-1 border-gray-300 rounded-md text-sm"
             >
-              <span>{value}</span>
+              <span>{filterLabels[value] ?? value}</span>
               <Button
                 onClick={() => removeValue(key, value)}
                 className="w-4 h-4 p-0 hover:text-orange transition-colors cursor-pointer"
@@ -168,18 +210,20 @@ export function CarFilters({ options }: Props) {
             </Badge>
           ))}
 
-          <Button
-            onClick={() => router.push(pathname)}
-            className="
-              w-max h-fit p-0 
-              text-orange text-sm
-              border-b border-b-transparent hover:border-b-orange hover:border-b rounded-none
-              cursor-pointer
-            "
-          >
-            Limpar filtros
-            <CloseLineIcon className="size-4" />
-          </Button>
+          <div className="w-full">
+            <Button
+              onClick={() => router.push(pathname)}
+              className="
+                w-max h-fit p-0 
+                text-orange text-sm
+                border-b border-b-transparent hover:border-b-orange hover:border-b rounded-none
+                cursor-pointer
+              "
+            >
+              Limpar filtros
+              <CloseLineIcon className="size-4" />
+            </Button>
+          </div>
         </div>
       )}
 
@@ -224,10 +268,84 @@ export function CarFilters({ options }: Props) {
                               hover:text-gray-600 data-[state=checked]:bg-orange
                               data-[state=checked]:border-orange"
                           />
-                          {option}
+                          {filterLabels[option] ?? option}
                         </label>
                       )
                     })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            )
+          }
+
+          if (filter.type === "year-range") {
+            return (
+              <AccordionItem key={filter.key} value={filter.key} className="border-b-0">
+                <AccordionTrigger className="cursor-pointer py-2 hover:no-underline">
+                  {filter.placeholder}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 text-sm">De</span>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 2018"
+                        value={yearMin}
+                        onChange={(e) => setYearMin(e.target.value)}
+                        className="text-sm border-gray-300 focus-visible:ring-0 shadow-none"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 text-sm">Até</span>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 2024"
+                        value={yearMax}
+                        onChange={(e) => setYearMax(e.target.value)}
+                        className="text-sm border-gray-300 focus-visible:ring-0 shadow-none"
+                      />
+                    </div>
+                    <Button onClick={applyYearFilter} className="w-full bg-orange hover:bg-darkorange text-white cursor-pointer">
+                      Aplicar
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            )
+          }
+
+          if (filter.type === "mileage-range") {
+            return (
+              <AccordionItem key={filter.key} value={filter.key} className="border-b-0">
+                <AccordionTrigger className="cursor-pointer py-2 hover:no-underline">
+                  {filter.placeholder}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 text-sm">De</span>
+                      <Input
+                        type="text"
+                        placeholder="Ex: 10.000 km"
+                        value={mileageMinFormatted}
+                        onChange={(e) => handleMileageInput(e.target.value, setMileageMin, setMileageMinFormatted)}
+                        className="text-sm border-gray-300 focus-visible:ring-0 shadow-none"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 text-sm">Até</span>
+                      <Input
+                        type="text"
+                        placeholder="Ex: 50.000 km"
+                        value={mileageMaxFormatted}
+                        onChange={(e) => handleMileageInput(e.target.value, setMileageMax, setMileageMaxFormatted)}
+                        className="text-sm border-gray-300 focus-visible:ring-0 shadow-none"
+                      />
+                    </div>
+                    <Button onClick={applyMileageFilter} className="w-full bg-orange hover:bg-darkorange text-white cursor-pointer">
+                      Aplicar
+                    </Button>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -249,7 +367,7 @@ export function CarFilters({ options }: Props) {
                         placeholder="R$ 0,00"
                         value={priceMinFormatted}
                         onChange={(e) => handlePriceInput(e.target.value, setPriceMin, setPriceMinFormatted)}
-                        className="border-gray-300 focus-visible:ring-0 shadow-none"
+                        className="text-sm border-gray-300 focus-visible:ring-0 shadow-none"
                       />
                     </div>
                     <div className="flex flex-col">
@@ -258,7 +376,8 @@ export function CarFilters({ options }: Props) {
                         type="text"
                         placeholder="R$ 0,00"
                         value={priceMaxFormatted}
-                        onChange={(e) => handlePriceInput(e.target.value, setPriceMax, setPriceMaxFormatted)}                         className="border-gray-300 focus-visible:ring-0 shadow-none"
+                        onChange={(e) => handlePriceInput(e.target.value, setPriceMax, setPriceMaxFormatted)}  
+                        className="text-sm border-gray-300 focus-visible:ring-0 shadow-none"
                       />
                     </div>
                     <Button

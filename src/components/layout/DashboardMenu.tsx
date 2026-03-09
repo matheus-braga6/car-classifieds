@@ -72,7 +72,7 @@ export default function DashboardMenu () {
         <MenuContent onClose={() => {}}/>
       </aside>
 
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      <div className="lg:hidden fixed top-4 right-4 z-50">
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger className="bg-orange p-2 rounded-full">
               <MenuLineIcon className="size-5 text-snow" />

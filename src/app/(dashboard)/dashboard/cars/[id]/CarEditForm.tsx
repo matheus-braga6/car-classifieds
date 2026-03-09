@@ -1,122 +1,229 @@
 "use client"
 
 import { useState } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useForm, Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase-client"
-import { carSchema, CarFormData, CarFromDB } from "@/types/car"
-
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Field, FieldLabel, FieldError } from "@/components/ui/field"
 import Image from "next/image"
-import { CloseLineIcon } from "@/assets/icons/CloseLineIcon"
-import { LoaderLineIcon } from "@/assets/icons/LoaderLineIcon"
 import { toast } from "sonner"
+
+import { createClient } from "@/lib/supabase-client"
+import { carSchema, CarFormData, CarFromDB, fuelOptions, transmissionOptions, categoryOptions } from "@/types/car"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { FormInput, FormSelect, FormSwitch, FormTextarea, FormPriceInput } from "@/components/ui/form-fields"
 import { DeleteCarDialog } from "./DeleteCarDialog"
+import { LoaderLineIcon } from "@/assets/icons/LoaderLineIcon"
+import { CloseLineIcon } from "@/assets/icons/CloseLineIcon"
 interface Props {
   car: CarFromDB
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value)
+const statusOptions = [
+  { value: "active", label: "Ativo" },
+  { value: "sold", label: "Vendido" },
+  { value: "reserved", label: "Reservado" },
+]
+
+const switchFields = [
+  { name: "armored",        label: "Blindado" },
+  { name: "convertible",    label: "Conversível" },
+  { name: "autopilot",      label: "Piloto automático" },
+  { name: "bluetooth",      label: "Bluetooth" },
+  { name: "parking_sensor", label: "Sensor de estacionamento" },
+  { name: "camera",         label: "Câmera de ré" },
+  { name: "rain_sensor",    label: "Sensor de chuva" },
+  { name: "multimedia",     label: "Central multimídia" },
+] as const
+
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider border-b border-gray-200 pb-2">
+        {title}
+      </h2>
+      {children}
+    </div>
+  )
+}
+
+function FormRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {children}
+    </div>
+  )
 }
 
 export default function CarEditForm({ car }: Props) {
   const supabase = createClient()
   const router = useRouter()
-  const [preview, setPreview] = useState<string | null>(car.image_url)
   const [saving, setSaving] = useState(false)
+  const [previews, setPreviews] = useState<{ file: File | null; url: string }[]>(
+    car.image_urls?.map((url) => ({ file: null, url })) ?? []
+  )
+  const [removedUrls, setRemovedUrls] = useState<string[]>([])
 
-  const form = useForm<CarFormData>({
-    resolver: zodResolver(carSchema),
+  const { control, handleSubmit } = useForm<CarFormData>({
+    resolver: zodResolver(carSchema) as Resolver<CarFormData>,
     defaultValues: {
-      title: car.title,
-      brand: car.brand,
-      year: car.year,
-      price: car.price,
-      image: undefined,
+      title: car.title ?? "",
+      brand: car.brand ?? "",
+      model: car.model ?? "",
+      year_fab: car.year_fab,
+      year_model: car.year_model,
+      category: car.category ?? "",
+      color_main: car.color_main ?? "",
+      mileage: car.mileage,
+      fuel: car.fuel ?? "",
+      transmission: car.transmission ?? "",
+      price: car.price ?? undefined,
+      color_secondary: car.color_secondary ?? "",
+      color_interior: car.color_interior ?? "",
+      plate: car.plate ?? "",
+      renavam: car.renavam ?? "",
+      chassis: car.chassis ?? "",
+      doors: car.doors ?? undefined,
+      seats: car.seats ?? undefined,
+      engine: car.engine ?? "",
+      power: car.power ?? "",
+      acceleration: car.acceleration ?? "",
+      autonomy: car.autonomy ?? undefined,
+      airbags: car.airbags ?? undefined,
+      warranty_until: car.warranty_until ?? "",
+      brakes: car.brakes ?? "",
+      headlights: car.headlights ?? "",
+      wheels: car.wheels ?? "",
+      sunroof: car.sunroof ?? "",
+      description: car.description ?? "",
+      armored: car.armored ?? false,
+      convertible: car.convertible ?? false,
+      autopilot: car.autopilot ?? false,
+      bluetooth: car.bluetooth ?? false,
+      parking_sensor: car.parking_sensor ?? false,
+      camera: car.camera ?? false,
+      rain_sensor: car.rain_sensor ?? false,
+      multimedia: car.multimedia ?? false,
+      featured: car.featured ?? false,
+      status: car.status ?? "active",
+      image_urls: car.image_urls ?? [],
     },
   })
 
-  const { control, handleSubmit, setValue } = form
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    const newPreviews = files.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }))
+    setPreviews((prev) => [...prev, ...newPreviews])
+  }
+
+  function handleRemoveImage(index: number) {
+    setPreviews((prev) => {
+      const item = prev[index]
+      if (!item.file) {
+        setRemovedUrls((prev) => [...prev, item.url])
+      } else {
+        URL.revokeObjectURL(item.url)
+      }
+      return prev.filter((_, i) => i !== index)
+    })
+  }
 
   async function onSubmit(data: CarFormData) {
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      toast.error("Você precisa estar logado!")
-      return
-    }
-    
-    const hasNewImage = data.image && data.image.length > 0
-    const hasExistingImage = preview !== null
-
-    if (!hasNewImage && !hasExistingImage) {
-      toast.error("A imagem é obrigatória!")
+    if (previews.length === 0) {
+      toast.error("Adicione pelo menos uma imagem!")
       return
     }
 
     setSaving(true)
-    let imageUrl = preview
 
-    if (hasNewImage) {
-      const imageFile = data.image[0]
-      const fileExt = imageFile.name.split(".").pop()
-      const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`
-
-      const { error: uploadError } = await supabase.storage
-        .from("car-images")
-        .upload(fileName, imageFile)
-
-      if (uploadError) {
-        toast.error("Falha ao adicionar imagem, tente novamente!")
-        setSaving(false)
-        return
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("car-images")
-        .getPublicUrl(fileName)
-
-      imageUrl = publicUrlData.publicUrl
-    }
-
-    const { error } = await supabase
-      .from("cars")
-      .update({
-        title: data.title,
-        brand: data.brand,
-        year: data.year,
-        price: data.price,
-        image_url: imageUrl,
-      })
-      .eq("id", car.id)
-
-    if (error) {
-      toast.error("Falha ao atualizar o carro, tente novamente!")
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.error("Você precisa estar logado!")
       setSaving(false)
       return
     }
 
-    toast.success("Carro atualizado com sucesso!")
-    router.push("/dashboard")
+    if (removedUrls.length > 0) {
+      const paths = removedUrls
+        .map((url) => url.split("/car-images/")[1])
+        .filter(Boolean)
+      if (paths.length) {
+        await supabase.storage.from("car-images").remove(paths)
+      }
+    }
+    
+    try {
+      const uploadedUrls: string[] = []
+
+      for (const preview of previews) {
+        if (!preview.file) {
+          uploadedUrls.push(preview.url)
+          continue
+        }
+
+        const fileExt = preview.file.name.split(".").pop()
+        const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from("car-images")
+          .upload(fileName, preview.file)
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage
+          .from("car-images")
+          .getPublicUrl(fileName)
+
+        uploadedUrls.push(publicUrlData.publicUrl)
+      }
+
+      const { error } = await supabase
+        .from("cars")
+        .update({
+          ...data,
+          image_urls: uploadedUrls,
+          warranty_until: data.warranty_until || null,
+          color_secondary: data.color_secondary || null,
+          color_interior: data.color_interior || null,
+          plate: data.plate || null,
+          renavam: data.renavam || null,
+          chassis: data.chassis || null,
+          engine: data.engine || null,
+          power: data.power || null,
+          acceleration: data.acceleration || null,
+          brakes: data.brakes || null,
+          headlights: data.headlights || null,
+          wheels: data.wheels || null,
+          sunroof: data.sunroof || null,
+          description: data.description || null,
+        })
+        .eq("id", car.id)
+
+      if (error) throw error
+
+      toast.success("Carro atualizado com sucesso!")
+      router.push("/dashboard")
+    } catch (err) {
+      console.error(err)
+      toast.error("Algo deu errado, por favor tente novamente!")
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleDelete() {
-    const imageUrl = car.image_url
+    if (car.image_urls?.length) {
+      const paths = car.image_urls
+        .map((url) => url.split("/car-images/")[1])
+        .filter(Boolean)
 
-    if (imageUrl) {
-      const path = imageUrl.split("/car-images/")[1]
-
-      if (path) {
-        await supabase.storage
-          .from("car-images")
-          .remove([path])
+      if (paths.length) {
+        await supabase.storage.from("car-images").remove(paths)
       }
     }
 
@@ -135,172 +242,166 @@ export default function CarEditForm({ car }: Props) {
     return true
   }
 
-  function handleRemoveImage() {
-    if (preview) URL.revokeObjectURL(preview)
-    setPreview(null)
-    setValue("image", undefined)
-  }
-
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="
-        w-full mx-auto p-6 max-w-3xl 
-        flex flex-col gap-4
+        w-full mx-auto p-6 max-w-6xl 
+        flex flex-col gap-6
         border border-gray-300 rounded-2xl 
       "
     >
-      <Controller
-        name="title"
-        control={control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid} className="gap-1">
-            <FieldLabel htmlFor={field.name} className="font-normal">Título</FieldLabel>
-            <Input
-              {...field}
-              id={field.name}
-              placeholder="Título"
-              aria-invalid={fieldState.invalid}
-              className="border-gray-300 focus-visible:ring-0 shadow-none"
-            />
-            {fieldState.invalid && (
-              <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
-            )}
-          </Field>
-        )}
-      />
+      {/* ── ANÚNCIO ── */}
+      <FormSection title="Anúncio">
+        <FormInput name="title" control={control} label="Título do anúncio" placeholder="Ex: Honda Civic EXL 2022 impecável" required />
+        <FormRow>
+          <FormSelect name="status" control={control} label="Status" options={statusOptions} />
+          <FormSwitch name="featured" control={control} label="Destacar Veículo" />
+        </FormRow>
+      </FormSection>
 
-      <Controller
-        name="brand"
-        control={control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid} className="gap-1">
-            <FieldLabel htmlFor={field.name} className="font-normal">Marca</FieldLabel>
-            <Input
-              {...field}
-              id={field.name}
-              placeholder="Marca"
-              aria-invalid={fieldState.invalid}
-              className="border-gray-300 focus-visible:ring-0 shadow-none"
-            />
-            {fieldState.invalid && (
-              <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
-            )}
-          </Field>
-        )}
-      />
+      {/* ── IDENTIFICAÇÃO ── */}
+      <FormSection title="Identificação">
+        <FormRow>
+          <FormInput name="brand" control={control} label="Marca" placeholder="Ex: Honda" required />
+          <FormInput name="model" control={control} label="Modelo" placeholder="Ex: Civic EXL" required />
+        </FormRow>
+        <FormRow>
+          <FormInput name="year_fab" control={control} label="Ano de fabricação" placeholder="Ex: 2021" type="number" required />
+          <FormInput name="year_model" control={control} label="Ano do modelo" placeholder="Ex: 2022" type="number" required />
+        </FormRow>
+        <FormRow>
+          <FormSelect name="category" control={control} label="Categoria" options={categoryOptions} />
+          <FormInput name="mileage" control={control} label="Quilometragem" placeholder="Ex: 45000" type="number" required />
+        </FormRow>
+        <FormRow>
+          <FormInput name="plate" control={control} label="Placa" placeholder="Ex: ABC-1234" />
+          <FormInput name="chassis" control={control} label="Chassi" placeholder="Ex: 9BWZZZ377VT004251" />
+        </FormRow>
+        <FormInput name="renavam" control={control} label="Renavam" placeholder="Ex: 00123456789" />
+      </FormSection>
 
-      <Controller
-        name="year"
-        control={control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid} className="gap-1">
-            <FieldLabel htmlFor={field.name} className="font-normal">Ano</FieldLabel>
-            <Input
-              id={field.name}
-              type="number"
-              placeholder="Ano"
-              aria-invalid={fieldState.invalid}
-              className="border-gray-300 focus-visible:ring-0 shadow-none"
-              defaultValue={field.value}
-              onChange={(e) => {
-                const value = e.target.value
-                field.onChange(value === "" ? undefined : Number(value))
-              }}
-            />
-            {fieldState.invalid && (
-              <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
-            )}
-          </Field>
-        )}
-      />
+      {/* ── MECÂNICA ── */}
+      <FormSection title="Mecânica">
+        <FormRow>
+          <FormSelect name="fuel" control={control} label="Combustível" options={fuelOptions} />
+          <FormSelect name="transmission" control={control} label="Transmissão" options={transmissionOptions} />
+        </FormRow>
+        <FormRow>
+          <FormInput name="engine" control={control} label="Motor" placeholder="Ex: 2.0 Turbo" />
+          <FormInput name="power" control={control} label="Potência" placeholder="Ex: 200cv" />
+        </FormRow>
+        <FormRow>
+          <FormInput name="acceleration" control={control} label="Aceleração" placeholder="Ex: 0-100 em 7s" />
+          <FormInput name="autonomy" control={control} label="Autonomia (km/l)" placeholder="Ex: 12.5" type="number" />
+        </FormRow>
+      </FormSection>
 
-      <Controller
-        name="price"
-        control={control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid} className="gap-1">
-            <FieldLabel htmlFor={field.name} className="font-normal">Preço</FieldLabel>
-            <Input
-              id={field.name}
-              type="text"
-              placeholder="R$0,00"
-              aria-invalid={fieldState.invalid}
-              className="border-gray-300 focus-visible:ring-0 shadow-none"
-              value={field.value ? formatCurrency(field.value) : ""}
-              onChange={(e) => {
-                const numbers = e.target.value.replace(/\D/g, "")
-                field.onChange(Number(numbers) / 100)
-              }}
-            />
-            {fieldState.invalid && (
-              <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
-            )}
-          </Field>
-        )}
-      />
+      {/* ── CARACTERÍSTICAS ── */}
+      <FormSection title="Características">
+        <FormRow>
+          <FormInput name="color_main" control={control} label="Cor predominante" placeholder="Ex: Preto" required />
+          <FormInput name="color_secondary" control={control} label="Cor secundária" placeholder="Ex: Prata" />
+        </FormRow>
+        <FormRow>
+          <FormInput name="color_interior" control={control} label="Cor interna" placeholder="Ex: Bege" />
+          <FormInput name="doors" control={control} label="Portas" placeholder="Ex: 4" type="number" />
+        </FormRow>
+        <FormRow>
+          <FormInput name="seats" control={control} label="Bancos" placeholder="Ex: 5" type="number" />
+          <FormInput name="airbags" control={control} label="Airbags" placeholder="Ex: 6" type="number" />
+        </FormRow>
+        <FormRow>
+          <FormInput name="brakes" control={control} label="Freios" placeholder="Ex: ABS a disco" />
+          <FormInput name="headlights" control={control} label="Faróis" placeholder="Ex: LED" />
+        </FormRow>
+        <FormRow>
+          <FormInput name="wheels" control={control} label="Rodas" placeholder='Ex: 17" liga leve' />
+          <FormInput name="sunroof" control={control} label="Teto solar" placeholder="Ex: Panorâmico" />
+        </FormRow>
+        <FormRow>
+          <FormInput name="warranty_until" control={control} label="Garantia de fábrica até" type="date" />
+        </FormRow>
+      </FormSection>
 
-      <Controller
-        name="image"
-        control={control}
-        render={({ field: { onChange: onFieldChange }, fieldState }) => (
-          <Field data-invalid={fieldState.invalid} className="gap-1">
-            <FieldLabel
-              htmlFor="image"
-              className="
-                w-full h-10
-                flex items-center justify-center
-                rounded-md font-normal
-                bg-snow hover:bg-gray-300 transition-colors
-                cursor-pointer"
-            >
-              Selecionar Imagem
-            </FieldLabel>
-            <Input
-              id="image"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                onFieldChange(e.target.files)
-                const file = e.target.files?.[0]
-                if (file) {
-                  if (preview) URL.revokeObjectURL(preview)
-                  setPreview(URL.createObjectURL(file))
-                }
-              }}
-            />
+      {/* ── OPCIONAIS ── */}
+      <FormSection title="Opcionais">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {switchFields.map(({ name, label }) => (
+            <FormSwitch key={name} name={name} control={control} label={label} row />
+          ))}
+        </div>
+      </FormSection>
 
-            {preview && (
-              <div className="relative w-fit!">
+      {/* ── PREÇO ── */}
+      <FormSection title="Preço">
+        <FormPriceInput
+          name="price"
+          control={control}
+          label="Preço"
+          hint='(deixe em branco para "Sob consulta")'
+        />
+      </FormSection>
+
+      {/* ── DESCRIÇÃO ── */}
+      <FormSection title="Descrição">
+        <FormTextarea
+          name="description"
+          control={control}
+          label="Descrição"
+          placeholder="Descreva o veículo, diferenciais, histórico de manutenção..."
+        />
+      </FormSection>
+
+      {/* ── IMAGENS ── */}
+      <FormSection title="Imagens">
+        <Field className="gap-1">
+          <FieldLabel
+            htmlFor="images"
+            className="w-full h-10 flex items-center justify-center rounded-md font-normal bg-snow hover:bg-gray-300 transition-colors cursor-pointer"
+          >
+            Adicionar Imagens
+          </FieldLabel>
+          <Input
+            id="images"
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleImageChange}
+          />
+        </Field>
+
+        {previews.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            {previews.map((preview, index) => (
+              <div key={preview.url} className="relative">
                 <Image
-                  src={preview}
-                  alt="Preview"
-                  className="w-50 object-cover border border-gray-300 rounded-lg"
+                  src={preview.url}
+                  alt={`Preview ${index + 1}`}
                   width={100}
                   height={100}
-                  sizes="200px"
+                  sizes="100px"
+                  className="w-24 h-24 object-cover border border-gray-300 rounded-lg"
                 />
+                {index === 0 && (
+                  <span className="absolute bottom-1 left-1 text-[10px] bg-orange text-white px-1 rounded">
+                    Capa
+                  </span>
+                )}
                 <Button
                   type="button"
                   size="icon"
-                  onClick={handleRemoveImage}
-                  className="
-                    w-8 h-8 absolute top-2 right-2
-                    bg-white flex justify-center items-center
-                    rounded-full shadow-md cursor-pointer"
+                  onClick={() => handleRemoveImage(index)}
+                  className="w-6 h-6 absolute top-1 right-1 bg-white rounded-full shadow-md cursor-pointer"
                 >
-                  <CloseLineIcon className="size-4 text-black" />
+                  <CloseLineIcon className="size-3 text-black" />
                 </Button>
               </div>
-            )}
-
-            {fieldState.invalid && (
-              <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
-            )}
-          </Field>
+            ))}
+          </div>
         )}
-      />
+      </FormSection>
 
       <Button 
         type="submit" 

@@ -40,7 +40,7 @@ export function CarFiltersMobile({ options }: Props) {
         <VisuallyHidden>
           <SheetTitle>Filtros</SheetTitle>
         </VisuallyHidden>
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
           <CarFilters options={options} />
         </div>
         <Button
