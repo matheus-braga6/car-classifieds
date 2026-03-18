@@ -1,6 +1,6 @@
-import Image from "next/image"
 import { BackButton } from "@/components/ui/back-button"
 import { fuelOptions, transmissionOptions, categoryOptions } from "@/types/car"
+import { CarImageSlider } from "@/components/car/CarImageSlider"
 
 interface Car {
   id: string
@@ -128,19 +128,7 @@ export function CarDetail({ car }: { car: Car }) {
 
       {/* ── IMAGENS ── */}
       {car.image_urls?.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {car.image_urls.map((url: string, index: number) => (
-            <div key={url} className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200">
-              <Image
-                src={url}
-                alt={`${car.title} - foto ${index + 1}`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 50vw, 33vw"
-              />
-            </div>
-          ))}
-        </div>
+        <CarImageSlider images={car.image_urls} title={car.title} />
       )}
 
       {/* ── IDENTIFICAÇÃO ── */}

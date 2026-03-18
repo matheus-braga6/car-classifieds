@@ -146,4 +146,21 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* MerryGo bullets — gerados dinamicamente pelo JS */
+  .car-slider__pagination .merrygo-bullet {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #d1d5db;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .car-slider__pagination .merrygo-bullet-active {
+    background-color: #f97316;
+    width: 20px;
+    border-radius: 4px;
+  }
 }
