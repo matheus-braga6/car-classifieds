@@ -1,23 +1,21 @@
 "use client"
 
-import { useState } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useEffect, useState, useMemo } from "react"
+import { useForm, Controller, Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Resolver } from "react-hook-form"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import Link from "next/link"
+import Image from "next/image"
 
-import { registerSchema, RegisterFormData } from "@/types/auth"
+import { editProfileSchema, EditProfileFormData, changePasswordSchema, ChangePasswordFormData } from "@/types/auth"
 import { createClient } from "@/lib/supabase-client"
 import { maskCPF, maskCNPJ, maskPhone, maskCEP, unmask } from "@/lib/masks"
 
-import { Container } from "@/components/layout/Container"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldError } from "@/components/ui/field"
 import { Switch } from "@/components/ui/switch"
 import { LoaderLineIcon } from "@/assets/icons/LoaderLineIcon"
+import { UserLineIcon } from "@/assets/icons/UserLineIcon"
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -38,18 +36,22 @@ function FormRow({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function RegisterPage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+export default function ProfilePage() {
+  const supabase = useMemo(() => createClient(), [])
+
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [isCNPJ, setIsCNPJ] = useState(false)
   const [isFetchingCEP, setIsFetchingCEP] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
-  const { control, handleSubmit, setValue, setError } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema) as Resolver<RegisterFormData>,
+  // Profile form
+  const { control, handleSubmit, setValue, setError, reset } = useForm<EditProfileFormData>({
+    resolver: zodResolver(editProfileSchema) as Resolver<EditProfileFormData>,
     defaultValues: {
-      email: "",
-      password: "",
-      confirm_password: "",
       name: "",
       document_type: "cpf",
       document: "",
@@ -65,7 +67,69 @@ export default function RegisterPage() {
     },
   })
 
-  // Fetch address from ViaCEP when CEP is complete
+  // Password form
+  const {
+    control: passwordControl,
+    handleSubmit: handlePasswordSubmit,
+    reset: resetPassword,
+  } = useForm<ChangePasswordFormData>({
+    resolver: zodResolver(changePasswordSchema) as Resolver<ChangePasswordFormData>,
+    defaultValues: {
+      password: "",
+      confirm_password: "",
+    },
+  })
+
+  // Load profile on mount
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      setUserId(user.id)
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single()
+
+      if (!profile) {
+        setIsLoadingProfile(false)
+        return
+      }
+
+      const isCnpj = profile.document_type === "cnpj"
+      setIsCNPJ(isCnpj)
+      setAvatarUrl(profile.avatar_url)
+
+      // Format fields for display
+      const formatDocument = isCnpj
+        ? maskCNPJ(profile.document)
+        : maskCPF(profile.document)
+
+      reset({
+        name: profile.name ?? "",
+        document_type: profile.document_type ?? "cpf",
+        document: formatDocument,
+        phone: maskPhone(profile.phone ?? ""),
+        company_name: profile.company_name ?? "",
+        cep: maskCEP(profile.cep ?? ""),
+        street: profile.street ?? "",
+        number: profile.number ?? "",
+        complement: profile.complement ?? "",
+        neighborhood: profile.neighborhood ?? "",
+        city: profile.city ?? "",
+        state: profile.state ?? "",
+      })
+
+      setIsLoadingProfile(false)
+    }
+
+    loadProfile()
+  }, [supabase, reset])
+
+  // Fetch address from ViaCEP
   async function handleCEPBlur(cep: string) {
     const numbers = unmask(cep)
     if (numbers.length !== 8) return
@@ -91,25 +155,42 @@ export default function RegisterPage() {
     }
   }
 
-  async function onSubmit(data: RegisterFormData) {
-    setIsLoading(true)
-    const supabase = createClient()
+  // Upload avatar
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
 
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-    })
+    setIsUploadingAvatar(true)
 
-    if (authError || !authData.user) {
-      toast.error(authError?.message ?? "Erro ao criar conta")
-      setIsLoading(false)
+    const ext = file.name.split(".").pop()
+    const path = `${userId}/avatar.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true })
+
+    if (uploadError) {
+      toast.error("Erro ao fazer upload da foto")
+      setIsUploadingAvatar(false)
       return
     }
 
-    // Insert profile
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: authData.user.id,
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path)
+    const url = `${data.publicUrl}?t=${Date.now()}` // cache bust
+
+    await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId)
+
+    setAvatarUrl(url)
+    toast.success("Foto atualizada!")
+    setIsUploadingAvatar(false)
+  }
+
+  // Save profile
+  async function onSubmitProfile(data: EditProfileFormData) {
+    if (!userId) return
+    setIsSavingProfile(true)
+
+    const { error } = await supabase.from("profiles").update({
       name: data.name,
       document: unmask(data.document),
       document_type: data.document_type,
@@ -122,96 +203,101 @@ export default function RegisterPage() {
       neighborhood: data.neighborhood,
       city: data.city,
       state: data.state,
-    })
+    }).eq("id", userId)
 
-    if (profileError) {
-      toast.error("Erro ao salvar dados do perfil")
-      setIsLoading(false)
-      return
+    if (error) {
+      toast.error("Erro ao salvar perfil")
+    } else {
+      toast.success("Perfil atualizado!")
     }
 
-    toast.success("Conta criada com sucesso!")
-    router.push("/login")
+    setIsSavingProfile(false)
+  }
+
+  // Change password
+  async function onSubmitPassword(data: ChangePasswordFormData) {
+    setIsSavingPassword(true)
+
+    const { error } = await supabase.auth.updateUser({
+      password: data.password,
+    })
+
+    if (error) {
+      toast.error("Erro ao alterar senha")
+    } else {
+      toast.success("Senha alterada com sucesso!")
+      resetPassword()
+    }
+
+    setIsSavingPassword(false)
+  }
+
+  if (isLoadingProfile) {
+    return (
+      <section className="w-full p-4 lg:py-10 flex items-center justify-center min-h-screen">
+        <LoaderLineIcon className="size-10 animate-spin text-orange" />
+      </section>
+    )
   }
 
   return (
-    <Container>
-      <section className="mt-20 py-10 min-h-[calc(100vh-80px)] flex flex-col">
-        <h1 className="text-3xl text-center text-gray font-bold mb-8">
-          CADASTRE-SE
-        </h1>
+    <section className="w-full p-4 lg:py-10 flex flex-col items-center gap-5">
+      <h1 className="w-full max-w-3xl text-3xl text-gray font-bold">
+        MEU PERFIL
+      </h1>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="mx-auto p-6 max-w-3xl w-full border border-gray-300 rounded-2xl flex flex-col gap-4"
-        >
-          {/* ── ACESSO ── */}
-          <FormSection title="Acesso">
-            <FormRow>
-              <Controller
-                name="email"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1">
-                    <FieldLabel className="font-normal">Email <span className="text-red-400">*</span></FieldLabel>
-                    <Input
-                      {...field}
-                      type="email"
-                      placeholder="seu@email.com"
-                      className="border-gray-300 focus-visible:ring-0 shadow-none"
-                    />
-                    {fieldState.invalid && (
-                      <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
-                    )}
-                  </Field>
-                )}
+      <div className="w-full max-w-3xl flex flex-col gap-8">
+        {/* ── FOTO DE PERFIL ── */}
+        <FormSection title="Foto de perfil">
+          <div className="flex items-center gap-6">
+            <div className="relative size-24 rounded-full overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt="Foto de perfil"
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <UserLineIcon className="size-10 text-gray-300" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="avatar-upload"
+                className="
+                  w-max px-4 h-9 rounded-md
+                  bg-orange hover:bg-darkorange
+                  text-white text-sm font-medium
+                  flex items-center justify-center
+                  cursor-pointer transition-colors
+                "
+              >
+                {isUploadingAvatar
+                  ? <LoaderLineIcon className="size-4 animate-spin" />
+                  : "Trocar foto"
+                }
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+                disabled={isUploadingAvatar}
               />
-            </FormRow>
+              <p className="text-xs text-gray-400">JPG, PNG ou WEBP. Máximo 2MB.</p>
+            </div>
+          </div>
+        </FormSection>
 
-            <FormRow>
-              <Controller
-                name="password"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1">
-                    <FieldLabel className="font-normal">Senha <span className="text-red-400">*</span></FieldLabel>
-                    <Input
-                      {...field}
-                      type="password"
-                      placeholder="••••••"
-                      className="border-gray-300 focus-visible:ring-0 shadow-none"
-                    />
-                    {fieldState.invalid && (
-                      <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
-                    )}
-                  </Field>
-                )}
-              />
-
-              <Controller
-                name="confirm_password"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1">
-                    <FieldLabel className="font-normal">Confirmar senha <span className="text-red-400">*</span></FieldLabel>
-                    <Input
-                      {...field}
-                      type="password"
-                      placeholder="••••••"
-                      className="border-gray-300 focus-visible:ring-0 shadow-none"
-                    />
-                    {fieldState.invalid && (
-                      <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
-                    )}
-                  </Field>
-                )}
-              />
-            </FormRow>
-          </FormSection>
-
-          {/* ── DADOS PESSOAIS ── */}
+        {/* ── DADOS PESSOAIS ── */}
+        <form onSubmit={handleSubmit(onSubmitProfile)} className="flex flex-col gap-8">
           <FormSection title="Dados pessoais">
-            {/* Switch CPF/CNPJ */}
+
             <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 border border-gray-200">
               <div className="flex flex-col">
                 <span className="text-sm font-medium">
@@ -268,9 +354,7 @@ export default function RegisterPage() {
                     <Input
                       value={field.value}
                       onChange={(e) => {
-                        const masked = isCNPJ
-                          ? maskCNPJ(e.target.value)
-                          : maskCPF(e.target.value)
+                        const masked = isCNPJ ? maskCNPJ(e.target.value) : maskCPF(e.target.value)
                         field.onChange(masked)
                       }}
                       placeholder={isCNPJ ? "00.000.000/0000-00" : "000.000.000-00"}
@@ -451,7 +535,7 @@ export default function RegisterPage() {
               name="state"
               control={control}
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1 max-w-[calc(50%-8px)]">
+                <Field data-invalid={fieldState.invalid} className="gap-1 w-full sm:max-w-[calc(50%-8px)]">
                   <FieldLabel className="font-normal">Estado <span className="text-red-400">*</span></FieldLabel>
                   <Input
                     {...field}
@@ -468,23 +552,72 @@ export default function RegisterPage() {
 
           <Button
             type="submit"
-            disabled={isLoading}
+            disabled={isSavingProfile}
             className="w-full h-10 bg-orange hover:bg-darkorange text-white cursor-pointer"
           >
-            {isLoading
+            {isSavingProfile
               ? <LoaderLineIcon className="size-4 animate-spin" />
-              : "Criar Conta"
+              : "Salvar alterações"
             }
           </Button>
-
-          <p className="text-sm text-center text-gray-500">
-            Já possui uma conta?{" "}
-            <Link href="/login" className="text-orange hover:underline">
-              Login
-            </Link>
-          </p>
         </form>
-      </section>
-    </Container>
+
+        {/* ── ALTERAR SENHA ── */}
+        <form onSubmit={handlePasswordSubmit(onSubmitPassword)} className="flex flex-col gap-4">
+          <FormSection title="Alterar senha">
+            <FormRow>
+              <Controller
+                name="password"
+                control={passwordControl}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid} className="gap-1">
+                    <FieldLabel className="font-normal">Nova senha <span className="text-red-400">*</span></FieldLabel>
+                    <Input
+                      {...field}
+                      type="password"
+                      placeholder="••••••"
+                      className="border-gray-300 focus-visible:ring-0 shadow-none"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
+                    )}
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="confirm_password"
+                control={passwordControl}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid} className="gap-1">
+                    <FieldLabel className="font-normal">Confirmar nova senha <span className="text-red-400">*</span></FieldLabel>
+                    <Input
+                      {...field}
+                      type="password"
+                      placeholder="••••••"
+                      className="border-gray-300 focus-visible:ring-0 shadow-none"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
+                    )}
+                  </Field>
+                )}
+              />
+            </FormRow>
+          </FormSection>
+
+          <Button
+            type="submit"
+            disabled={isSavingPassword}
+            className="w-full h-10 bg-orange hover:bg-darkorange text-white cursor-pointer"
+          >
+            {isSavingPassword
+              ? <LoaderLineIcon className="size-4 animate-spin" />
+              : "Alterar senha"
+            }
+          </Button>
+        </form>
+      </div>
+    </section>
   )
 }

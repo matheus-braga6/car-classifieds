@@ -9,7 +9,7 @@ import Link from "next/link"
 
 import { LoaderLineIcon } from "@/assets/icons/LoaderLineIcon"
 
-import { authSchema, AuthFormData } from "@/types/auth"
+import { loginSchema, LoginFormData } from "@/types/auth"
 import { createClient } from "@/lib/supabase-client"
 
 import { Container } from "@/components/layout/Container"
@@ -21,15 +21,15 @@ export default function LoginPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  const { control, handleSubmit } = useForm<AuthFormData>({
-    resolver: zodResolver(authSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  })
+  const { control, handleSubmit } = useForm<LoginFormData>({
+  resolver: zodResolver(loginSchema),
+  defaultValues: {
+    email: "",
+    password: "",
+  },
+})
 
-  async function onSubmit(data: AuthFormData) {
+  async function onSubmit(data: LoginFormData) {
     setIsLoading(true)
     const supabase = createClient()
 
@@ -39,7 +39,11 @@ export default function LoginPage() {
     })
 
     if (error) {
-      toast.error(error.message)
+      if (error.code === "invalid_credentials") {
+        toast.error("Email ou senha incorretos")
+      } else {
+        toast.error("Erro ao fazer login. Tente novamente")
+      }
       setIsLoading(false)
       return
     }

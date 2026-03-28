@@ -13,12 +13,21 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import Image from "next/image"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 interface MenuContentProps {
   onClose: () => void
 }
 
+const menuLinks = [
+  { href: "/dashboard",          label: "Meus Carros" },
+  { href: "/dashboard/cars/new", label: "Adicionar Carro" },
+  { href: "/dashboard/profile",  label: "Meu Perfil" },
+]
+
 function MenuContent({ onClose }: MenuContentProps) {
+  const pathname = usePathname()
+
   return (
     <div className="w-full flex flex-col gap-5 lg:p-4">
       <Link href="/" className="flex w-max mr-auto">
@@ -30,33 +39,27 @@ function MenuContent({ onClose }: MenuContentProps) {
         />
       </Link>
 
-      <Link href="/dashboard" onClick={onClose}>
-        <Button
-          variant="ghost"
-          className="
-            w-max lg:w-full h-fit lg:h-9 p-0 lg:p-2
-            hover:bg-orange 
-            text-black hover:text-white 
-            cursor-pointer
-          "
-        >
-          Meus Carros
-        </Button>
-      </Link>
+      {menuLinks.map((link) => {
+        const isActive = pathname === link.href
 
-      <Link href="/dashboard/cars/new" onClick={onClose}>
-        <Button
-          variant="ghost"
-          className="
-            w-max lg:w-full h-fit lg:h-9 p-0 lg:p-2
-            hover:bg-orange 
-            text-black hover:text-white 
-            cursor-pointer
-          "
-        >
-          Adicionar Carro
-        </Button>
-      </Link>
+        return (
+          <Link key={link.href} href={link.href} onClick={onClose}>
+            <Button
+              variant="ghost"
+              className={`
+                w-max lg:w-full h-fit lg:h-9 p-2
+                cursor-pointer
+                ${isActive
+                  ? "bg-orange text-white hover:bg-orange hover:text-white"
+                  : "text-black hover:bg-orange hover:text-white"
+                }
+              `}
+            >
+              {link.label}
+            </Button>
+          </Link>
+        )
+      })}
 
       <LogoutButton variant="ghost" />
     </div>
