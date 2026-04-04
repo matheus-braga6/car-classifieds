@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-// @ts-expect-error the module exists
 import './globals.css'
 import { Toaster } from "@/components/ui/sonner"
 
