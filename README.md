@@ -1,6 +1,6 @@
-# 🚗 Car Classifieds
+# 🚗 Stox
 
-Plataforma de anúncios de veículos construída com Next.js e Supabase.
+Plataforma de gestão de estoque digital construída com Next.js e Supabase.
 
 ⚠️ Este projeto está em desenvolvimento ativo. Novas funcionalidades e melhorias estão sendo adicionadas progressivamente.
 
@@ -28,7 +28,7 @@ O objetivo deste projeto é praticar integração full-stack utilizando ferramen
 
 ## 🚀 Funcionalidades Implementadas
 
-markdown# 🚗 Car Classifieds
+markdown# 🚗 Stox
 
 Plataforma de anúncios de veículos construída com Next.js e Supabase.
 
@@ -62,6 +62,8 @@ O objetivo deste projeto é praticar integração full-stack utilizando ferramen
 - ✅ Cadastro e login de usuários
 - ✅ Proteção de rotas privadas via Middleware
 - ✅ Header dinâmico baseado no estado de autenticação
+- ✅ Confirmação de conta via e-mail
+- ✅ Fluxo de recuperação de senha
 
 ### Anúncios
 - ✅ Listagem pública de veículos
@@ -101,11 +103,7 @@ O objetivo deste projeto é praticar integração full-stack utilizando ferramen
 
 ## 📦 Próximas Melhorias
 
-- 🖼️ Slide de imagens na página de detalhe do veículo
-- 👤 Página de perfil do vendedor
 - 📞 Exibição de contato do vendedor na página de detalhe
-- 📧 Disparo de e-mails (contato, notificações)
-- 🎨 Branding (identidade visual, logo, cores)
 - 🖥️ Revisão de layout do dashboard
 - 🏠 Revisão de layout da home page
 - 📄 Paginação

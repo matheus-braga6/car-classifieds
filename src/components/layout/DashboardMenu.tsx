@@ -30,12 +30,12 @@ function MenuContent({ onClose }: MenuContentProps) {
 
   return (
     <div className="w-full flex flex-col gap-5 lg:p-4">
-      <Link href="/" className="flex w-max mr-auto">
+      <Link href="/" className="flex w-max mx-auto">
         <Image
-          src="/favicon.png"
-          alt="Car Classifieds"
-          width={80}
-          height={80}
+          src="/logo.png"
+          alt="Stox Favicon"
+          width={170}
+          height={56}
         />
       </Link>
 

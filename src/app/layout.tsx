@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import "./globals.css";
+// @ts-expect-error the module exists
+import './globals.css'
 import { Toaster } from "@/components/ui/sonner"
 
 export const metadata: Metadata = {
-  title: "Car Classifieds",
-  description: "Encontre seu próximo carro",
+  title: "Stox",
+  description: "Plataforma de gestão de estoque digital",
   icons: {
     icon: "/favicon.png",      
     shortcut: "/favicon.png",   

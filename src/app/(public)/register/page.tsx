@@ -16,8 +16,9 @@ import { Container } from "@/components/layout/Container"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldError } from "@/components/ui/field"
-import { Switch } from "@/components/ui/switch"
 import { LoaderLineIcon } from "@/assets/icons/LoaderLineIcon"
+import { EyeLineIcon } from "@/assets/icons/EyeLineIcon"
+import { EyeOffLineIcon } from "@/assets/icons/EyeOffLineIcon"
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -38,11 +39,19 @@ function FormRow({ children }: { children: React.ReactNode }) {
   )
 }
 
+function usePasswordVisibility() {
+  const [visible, setVisible] = useState(false)
+  const toggle = () => setVisible((prev) => !prev)
+  return { visible, toggle }
+}
+
 export default function RegisterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isCNPJ, setIsCNPJ] = useState(false)
   const [isFetchingCEP, setIsFetchingCEP] = useState(false)
+  const password = usePasswordVisibility()
+  const confirmPassword = usePasswordVisibility()
 
   const { control, handleSubmit, setValue, setError } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema) as Resolver<RegisterFormData>,
@@ -99,6 +108,9 @@ export default function RegisterPage() {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login?confirmed=true`
+      }
     })
 
     if (authError || !authData.user) {
@@ -131,7 +143,7 @@ export default function RegisterPage() {
     }
 
     toast.success("Conta criada com sucesso!")
-    router.push("/login")
+    router.push("/confirm-email")
   }
 
   return (
@@ -175,12 +187,24 @@ export default function RegisterPage() {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldLabel className="font-normal">Senha <span className="text-red-400">*</span></FieldLabel>
-                    <Input
-                      {...field}
-                      type="password"
-                      placeholder="••••••"
-                      className="border-gray-300 focus-visible:ring-0 shadow-none"
-                    />
+                    <div className="relative">
+                      <Input
+                        {...field}
+                        type={password.visible ? "text" : "password"}
+                        placeholder="••••••"
+                        className="border-gray-300 focus-visible:ring-0 shadow-none pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={password.toggle}
+                        className="size-4 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      >
+                        {password.visible
+                          ? <EyeOffLineIcon className="size-4" />
+                          : <EyeLineIcon className="size-4" />
+                        }
+                      </button>
+                    </div>
                     {fieldState.invalid && (
                       <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
                     )}
@@ -194,12 +218,24 @@ export default function RegisterPage() {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldLabel className="font-normal">Confirmar senha <span className="text-red-400">*</span></FieldLabel>
-                    <Input
-                      {...field}
-                      type="password"
-                      placeholder="••••••"
-                      className="border-gray-300 focus-visible:ring-0 shadow-none"
-                    />
+                    <div className="relative">
+                      <Input
+                        {...field}
+                        type={confirmPassword.visible ? "text" : "password"}
+                        placeholder="••••••"
+                        className="border-gray-300 focus-visible:ring-0 shadow-none pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={confirmPassword.toggle}
+                        className="size-4 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      >
+                        {confirmPassword.visible
+                          ? <EyeOffLineIcon className="size-4" />
+                          : <EyeLineIcon className="size-4" />
+                        }
+                      </button>
+                    </div>
                     {fieldState.invalid && (
                       <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
                     )}
@@ -211,32 +247,60 @@ export default function RegisterPage() {
 
           {/* ── DADOS PESSOAIS ── */}
           <FormSection title="Dados pessoais">
-            {/* Switch CPF/CNPJ */}
-            <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 border border-gray-200">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {isCNPJ ? "Pessoa Jurídica (CNPJ)" : "Pessoa Física (CPF)"}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {isCNPJ ? "Empresa, MEI ou similar" : "Cadastro individual"}
-                </span>
-              </div>
-              <Controller
-                name="document_type"
-                control={control}
-                render={({ field }) => (
-                  <Switch
-                    checked={isCNPJ}
-                    onCheckedChange={(checked) => {
-                      setIsCNPJ(checked)
-                      field.onChange(checked ? "cnpj" : "cpf")
-                      setValue("document", "")
-                    }}
-                    className="cursor-pointer data-[state=unchecked]:bg-gray-300 data-[state=checked]:bg-orange"
-                  />
-                )}
-              />
-            </div>
+            {/* Radio CPF/CNPJ */}
+            <Controller
+              name="document_type"
+              control={control}
+              render={({ field }) => (
+                <div className="grid grid-cols-2 gap-3">
+                  <label
+                    className={`
+                      flex flex-col gap-0.5 p-3 rounded-lg border cursor-pointer transition-colors
+                      ${!isCNPJ
+                        ? "border-orange bg-orange/5"
+                        : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                      }
+                    `}
+                  >
+                    <input
+                      type="radio"
+                      className="hidden"
+                      checked={!isCNPJ}
+                      onChange={() => {
+                        setIsCNPJ(false)
+                        field.onChange("cpf")
+                        setValue("document", "")
+                      }}
+                    />
+                    <span className="text-sm font-medium">Pessoa Física</span>
+                    <span className="text-xs text-gray-400">Cadastro individual (CPF)</span>
+                  </label>
+
+                  <label
+                    className={`
+                      flex flex-col gap-0.5 p-3 rounded-lg border cursor-pointer transition-colors
+                      ${isCNPJ
+                        ? "border-orange bg-orange/5"
+                        : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                      }
+                    `}
+                  >
+                    <input
+                      type="radio"
+                      className="hidden"
+                      checked={isCNPJ}
+                      onChange={() => {
+                        setIsCNPJ(true)
+                        field.onChange("cnpj")
+                        setValue("document", "")
+                      }}
+                    />
+                    <span className="text-sm font-medium">Pessoa Jurídica</span>
+                    <span className="text-xs text-gray-400">Empresa, MEI ou similar (CNPJ)</span>
+                  </label>
+                </div>
+              )}
+            />
 
             <FormRow>
               <Controller

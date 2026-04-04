@@ -37,13 +37,13 @@ export function Header() {
   return (
     <header className="absolute bg-snow top-0 left-0 w-full h-20 z-50">
       <Container>
-        <div className="flex items-center gap-7 h-full">
+        <div className="flex items-center gap-7 h-20">
           <Link href="/" className="flex w-max mr-auto">
             <Image
-              src="/favicon.png"
-              alt="Car Classifieds"
-              width={80}
-              height={80}
+              src="/logo.png"
+              alt="Stox Logo"
+              width={170}
+              height={56}
             />
           </Link>
 

@@ -13,9 +13,11 @@ import { maskCPF, maskCNPJ, maskPhone, maskCEP, unmask } from "@/lib/masks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldError } from "@/components/ui/field"
-import { Switch } from "@/components/ui/switch"
 import { LoaderLineIcon } from "@/assets/icons/LoaderLineIcon"
 import { UserLineIcon } from "@/assets/icons/UserLineIcon"
+import { EyeLineIcon } from "@/assets/icons/EyeLineIcon"
+import { EyeOffLineIcon } from "@/assets/icons/EyeOffLineIcon"
+import { Skeleton } from "@/components/ui/skeleton"
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -36,13 +38,22 @@ function FormRow({ children }: { children: React.ReactNode }) {
   )
 }
 
+function usePasswordVisibility() {
+  const [visible, setVisible] = useState(false)
+  const toggle = () => setVisible((prev) => !prev)
+  return { visible, toggle }
+}
+
 export default function ProfilePage() {
   const supabase = useMemo(() => createClient(), [])
+  const newPassword = usePasswordVisibility()
+  const confirmNewPassword = usePasswordVisibility()
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [isAvatarLoading, setIsAvatarLoading] = useState(false)
   const [isCNPJ, setIsCNPJ] = useState(false)
   const [isFetchingCEP, setIsFetchingCEP] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -165,6 +176,14 @@ export default function ProfilePage() {
     const ext = file.name.split(".").pop()
     const path = `${userId}/avatar.${ext}`
 
+    // Delete previous avatar if exists
+    if (avatarUrl) {
+      const previousPath = avatarUrl.split("/avatars/")[1]?.split("?")[0]
+      if (previousPath) {
+        await supabase.storage.from("avatars").remove([previousPath])
+      }
+    }
+
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(path, file, { upsert: true })
@@ -181,6 +200,7 @@ export default function ProfilePage() {
     await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId)
 
     setAvatarUrl(url)
+    setIsAvatarLoading(true)
     toast.success("Foto atualizada!")
     setIsUploadingAvatar(false)
   }
@@ -251,12 +271,18 @@ export default function ProfilePage() {
         <FormSection title="Foto de perfil">
           <div className="flex items-center gap-6">
             <div className="relative size-24 rounded-full overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
+  
+              {(isAvatarLoading || isUploadingAvatar) && (
+                <Skeleton className="absolute inset-0 w-full h-full z-10" />
+              )}
+
               {avatarUrl ? (
                 <Image
                   src={avatarUrl}
                   alt="Foto de perfil"
                   fill
                   className="object-cover"
+                  onLoad={() => setIsAvatarLoading(false)}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
@@ -297,32 +323,59 @@ export default function ProfilePage() {
         {/* ── DADOS PESSOAIS ── */}
         <form onSubmit={handleSubmit(onSubmitProfile)} className="flex flex-col gap-8">
           <FormSection title="Dados pessoais">
+            <Controller
+              name="document_type"
+              control={control}
+              render={({ field }) => (
+                <div className="grid grid-cols-2 gap-3">
+                  <label
+                    className={`
+                      flex flex-col gap-0.5 p-3 rounded-lg border cursor-pointer transition-colors
+                      ${!isCNPJ
+                        ? "border-orange bg-orange/5"
+                        : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                      }
+                    `}
+                  >
+                    <input
+                      type="radio"
+                      className="hidden"
+                      checked={!isCNPJ}
+                      onChange={() => {
+                        setIsCNPJ(false)
+                        field.onChange("cpf")
+                        setValue("document", "")
+                      }}
+                    />
+                    <span className="text-sm font-medium">Pessoa Física</span>
+                    <span className="text-xs text-gray-400">Cadastro individual (CPF)</span>
+                  </label>
 
-            <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-gray-50 border border-gray-200">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {isCNPJ ? "Pessoa Jurídica (CNPJ)" : "Pessoa Física (CPF)"}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {isCNPJ ? "Empresa, MEI ou similar" : "Cadastro individual"}
-                </span>
-              </div>
-              <Controller
-                name="document_type"
-                control={control}
-                render={({ field }) => (
-                  <Switch
-                    checked={isCNPJ}
-                    onCheckedChange={(checked) => {
-                      setIsCNPJ(checked)
-                      field.onChange(checked ? "cnpj" : "cpf")
-                      setValue("document", "")
-                    }}
-                    className="cursor-pointer data-[state=unchecked]:bg-gray-300 data-[state=checked]:bg-orange"
-                  />
-                )}
-              />
-            </div>
+                  <label
+                    className={`
+                      flex flex-col gap-0.5 p-3 rounded-lg border cursor-pointer transition-colors
+                      ${isCNPJ
+                        ? "border-orange bg-orange/5"
+                        : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                      }
+                    `}
+                  >
+                    <input
+                      type="radio"
+                      className="hidden"
+                      checked={isCNPJ}
+                      onChange={() => {
+                        setIsCNPJ(true)
+                        field.onChange("cnpj")
+                        setValue("document", "")
+                      }}
+                    />
+                    <span className="text-sm font-medium">Pessoa Jurídica</span>
+                    <span className="text-xs text-gray-400">Empresa, MEI ou similar (CNPJ)</span>
+                  </label>
+                </div>
+              )}
+            />
 
             <FormRow>
               <Controller
@@ -572,12 +625,24 @@ export default function ProfilePage() {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldLabel className="font-normal">Nova senha <span className="text-red-400">*</span></FieldLabel>
-                    <Input
-                      {...field}
-                      type="password"
-                      placeholder="••••••"
-                      className="border-gray-300 focus-visible:ring-0 shadow-none"
-                    />
+                    <div className="relative">
+                      <Input
+                        {...field}
+                        type={newPassword.visible ? "text" : "password"}
+                        placeholder="••••••"
+                        className="border-gray-300 focus-visible:ring-0 shadow-none pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={newPassword.toggle}
+                        className="size-4 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      >
+                        {newPassword.visible
+                          ? <EyeOffLineIcon className="size-4" />
+                          : <EyeLineIcon className="size-4" />
+                        }
+                      </button>
+                    </div>
                     {fieldState.invalid && (
                       <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
                     )}
@@ -591,12 +656,24 @@ export default function ProfilePage() {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldLabel className="font-normal">Confirmar nova senha <span className="text-red-400">*</span></FieldLabel>
-                    <Input
-                      {...field}
-                      type="password"
-                      placeholder="••••••"
-                      className="border-gray-300 focus-visible:ring-0 shadow-none"
-                    />
+                    <div className="relative">
+                      <Input
+                        {...field}
+                        type={confirmNewPassword.visible ? "text" : "password"}
+                        placeholder="••••••"
+                        className="border-gray-300 focus-visible:ring-0 shadow-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={confirmNewPassword.toggle}
+                        className="size-4 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      >
+                        {confirmNewPassword.visible
+                          ? <EyeOffLineIcon className="size-4" />
+                          : <EyeLineIcon className="size-4" />
+                        }
+                      </button>
+                    </div>
                     {fieldState.invalid && (
                       <FieldError className="text-red-500 text-xs">{fieldState.error?.message}</FieldError>
                     )}

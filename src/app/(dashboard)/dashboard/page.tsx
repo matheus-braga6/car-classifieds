@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { CarCard } from "@/components/car/CarCard"
 import { CarFiltersDashboard } from "@/components/car/CarFiltersDashboard"
+import { redirect } from "next/navigation"
 interface PageProps {
   searchParams: Promise<{
     brand?: string
@@ -20,11 +21,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const { brand, fuel, transmission, color_main, yearMin, yearMax, mileageMin, mileageMax, priceMin, priceMax } = await searchParams
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    redirect('/login')
+  }
 
   const { data: allCars } = await supabase
     .from("cars")
     .select("brand, year_model, fuel, transmission, color_main")
-    .eq("user_id", user!.id)
+    .eq("user_id", user.id)
 
   const brands = [...new Set(allCars?.map((c) => c.brand) ?? [])].sort()
   const fuels = [...new Set(allCars?.map((c) => c.fuel).filter(Boolean) ?? [])]
@@ -35,7 +40,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   let query = supabase
   .from("cars")
   .select("*")
-  .eq("user_id", user!.id)
+  .eq("user_id", user.id)
   .order("featured", { ascending: false })
   .order("created_at", { ascending: false })
 

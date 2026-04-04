@@ -12,9 +12,9 @@ export function Footer() {
         <Container>
           <div className="grid gap-7 lg:gap-12 py-16 md:grid-cols-2">
             <div className="space-y-4">
-              <h3 className="text-xl font-bold">Car Classifieds</h3>
+              <h3 className="text-xl font-bold">Stox</h3>
               <p className="text-gray text-sm max-w-sm">
-                Encontre o carro perfeito com facilidade. Explore anúncios confiáveis, compare opções e conecte-se diretamente com os vendedores — tudo em um só lugar.
+                Plataforma de gestão de estoque digital
               </p>
 
               <div className="flex gap-3 mt-8">
@@ -57,7 +57,7 @@ export function Footer() {
 
           <div className="border-t border-gray-400 py-6">
             <p className="text-center text-xs text-gray">
-              © {new Date().getFullYear()} Car Classifieds. Todos direitos reservados.
+              © {new Date().getFullYear()} Stox. Todos direitos reservados.
             </p>
           </div>
         </Container>
